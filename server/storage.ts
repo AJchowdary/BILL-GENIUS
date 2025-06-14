@@ -10,6 +10,8 @@ import {
   type InsertExpense,
   type ExpenseWithCategory 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -347,4 +349,331 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database Storage Implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    return await db.select().from(categories);
+  }
+
+  async createCategory(insertCategory: InsertCategory): Promise<Category> {
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+
+  async getExpensesByUserId(userId: number): Promise<ExpenseWithCategory[]> {
+    const result = await db
+      .select({
+        id: expenses.id,
+        userId: expenses.userId,
+        amount: expenses.amount,
+        categoryId: expenses.categoryId,
+        merchant: expenses.merchant,
+        description: expenses.description,
+        date: expenses.date,
+        receiptUrl: expenses.receiptUrl,
+        notes: expenses.notes,
+        source: expenses.source,
+        createdAt: expenses.createdAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          color: categories.color,
+        },
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(eq(expenses.userId, userId))
+      .orderBy(desc(expenses.date));
+
+    return result.map(row => ({
+      ...row,
+      category: row.category,
+    }));
+  }
+
+  async getExpensesByUserIdAndMonth(userId: number, year: number, month: number): Promise<ExpenseWithCategory[]> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const result = await db
+      .select({
+        id: expenses.id,
+        userId: expenses.userId,
+        amount: expenses.amount,
+        categoryId: expenses.categoryId,
+        merchant: expenses.merchant,
+        description: expenses.description,
+        date: expenses.date,
+        receiptUrl: expenses.receiptUrl,
+        notes: expenses.notes,
+        source: expenses.source,
+        createdAt: expenses.createdAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          color: categories.color,
+        },
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(
+        and(
+          eq(expenses.userId, userId),
+          gte(expenses.date, startDate),
+          lte(expenses.date, endDate)
+        )
+      )
+      .orderBy(desc(expenses.date));
+
+    return result.map(row => ({
+      ...row,
+      category: row.category,
+    }));
+  }
+
+  async getExpensesByUserIdAndPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date: Date = new Date()): Promise<ExpenseWithCategory[]> {
+    let startDate: Date;
+    let endDate: Date;
+
+    const referenceDate = new Date(date);
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(referenceDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(referenceDate);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      
+      case 'week':
+        startDate = new Date(referenceDate);
+        startDate.setDate(referenceDate.getDate() - referenceDate.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      
+      case 'month':
+        startDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+        endDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      
+      case 'year':
+        startDate = new Date(referenceDate.getFullYear(), 0, 1);
+        endDate = new Date(referenceDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      
+      default:
+        throw new Error(`Invalid period: ${period}`);
+    }
+
+    const result = await db
+      .select({
+        id: expenses.id,
+        userId: expenses.userId,
+        amount: expenses.amount,
+        categoryId: expenses.categoryId,
+        merchant: expenses.merchant,
+        description: expenses.description,
+        date: expenses.date,
+        receiptUrl: expenses.receiptUrl,
+        notes: expenses.notes,
+        source: expenses.source,
+        createdAt: expenses.createdAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          color: categories.color,
+        },
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(
+        and(
+          eq(expenses.userId, userId),
+          gte(expenses.date, startDate),
+          lte(expenses.date, endDate)
+        )
+      )
+      .orderBy(desc(expenses.date));
+
+    return result.map(row => ({
+      ...row,
+      category: row.category,
+    }));
+  }
+
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const [expense] = await db
+      .insert(expenses)
+      .values({
+        userId: insertExpense.userId!,
+        amount: insertExpense.amount,
+        categoryId: insertExpense.categoryId!,
+        merchant: insertExpense.merchant || null,
+        description: insertExpense.description || null,
+        date: new Date(insertExpense.date),
+        receiptUrl: insertExpense.receiptUrl || null,
+        notes: insertExpense.notes || null,
+        source: insertExpense.source || "manual",
+      })
+      .returning();
+    return expense;
+  }
+
+  async updateExpense(id: number, updateData: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const updateValues: any = {};
+    
+    if (updateData.amount !== undefined) updateValues.amount = updateData.amount;
+    if (updateData.categoryId !== undefined) updateValues.categoryId = updateData.categoryId;
+    if (updateData.merchant !== undefined) updateValues.merchant = updateData.merchant;
+    if (updateData.description !== undefined) updateValues.description = updateData.description;
+    if (updateData.date !== undefined) updateValues.date = new Date(updateData.date);
+    if (updateData.receiptUrl !== undefined) updateValues.receiptUrl = updateData.receiptUrl;
+    if (updateData.notes !== undefined) updateValues.notes = updateData.notes;
+    if (updateData.source !== undefined) updateValues.source = updateData.source;
+
+    const [expense] = await db
+      .update(expenses)
+      .set(updateValues)
+      .where(eq(expenses.id, id))
+      .returning();
+    
+    return expense || undefined;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db
+      .delete(expenses)
+      .where(eq(expenses.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+
+  async getCategoryTotals(userId: number, year: number, month: number): Promise<{ categoryId: number; categoryName: string; total: number; color: string; icon: string }[]> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const result = await db
+      .select({
+        categoryId: categories.id,
+        categoryName: categories.name,
+        color: categories.color,
+        icon: categories.icon,
+        total: sql<number>`sum(cast(${expenses.amount} as decimal))`.as('total'),
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(
+        and(
+          eq(expenses.userId, userId),
+          gte(expenses.date, startDate),
+          lte(expenses.date, endDate)
+        )
+      )
+      .groupBy(categories.id, categories.name, categories.color, categories.icon)
+      .orderBy(desc(sql`sum(cast(${expenses.amount} as decimal))`));
+
+    return result.map(row => ({
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      total: Number(row.total) || 0,
+      color: row.color,
+      icon: row.icon,
+    }));
+  }
+
+  async getCategoryTotalsByPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date: Date = new Date()): Promise<{ categoryId: number; categoryName: string; total: number; color: string; icon: string }[]> {
+    let startDate: Date;
+    let endDate: Date;
+
+    const referenceDate = new Date(date);
+
+    switch (period) {
+      case 'day':
+        startDate = new Date(referenceDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(referenceDate);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      
+      case 'week':
+        startDate = new Date(referenceDate);
+        startDate.setDate(referenceDate.getDate() - referenceDate.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      
+      case 'month':
+        startDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+        endDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      
+      case 'year':
+        startDate = new Date(referenceDate.getFullYear(), 0, 1);
+        endDate = new Date(referenceDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      
+      default:
+        throw new Error(`Invalid period: ${period}`);
+    }
+
+    const result = await db
+      .select({
+        categoryId: categories.id,
+        categoryName: categories.name,
+        color: categories.color,
+        icon: categories.icon,
+        total: sql<number>`sum(cast(${expenses.amount} as decimal))`.as('total'),
+      })
+      .from(expenses)
+      .innerJoin(categories, eq(expenses.categoryId, categories.id))
+      .where(
+        and(
+          eq(expenses.userId, userId),
+          gte(expenses.date, startDate),
+          lte(expenses.date, endDate)
+        )
+      )
+      .groupBy(categories.id, categories.name, categories.color, categories.icon)
+      .orderBy(desc(sql`sum(cast(${expenses.amount} as decimal))`));
+
+    return result.map(row => ({
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      total: Number(row.total) || 0,
+      color: row.color,
+      icon: row.icon,
+    }));
+  }
+}
+
+export const storage = new DatabaseStorage();
