@@ -49,12 +49,15 @@ export default function Analytics() {
     }
   };
 
+  // Use a stable date reference to prevent infinite queries
+  const currentDate = new Date().toISOString().split('T')[0]; // Just the date part
+
   const { data: categoryTotals = [] } = useQuery<CategoryTotal[]>({
-    queryKey: ["/api/analytics/category-totals", { period: selectedPeriod, date: new Date().toISOString() }],
+    queryKey: ["/api/analytics/category-totals", selectedPeriod, currentDate],
   });
 
   const { data: summary } = useQuery<MonthlySummary>({
-    queryKey: ["/api/analytics/monthly-summary", { period: selectedPeriod, date: new Date().toISOString() }],
+    queryKey: ["/api/analytics/monthly-summary", selectedPeriod, currentDate],
   });
 
   const timePeriods = [

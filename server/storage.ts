@@ -50,6 +50,8 @@ export class MemStorage implements IStorage {
     
     // Initialize default categories
     this.initializeDefaultCategories();
+    // Initialize sample data
+    this.initializeSampleData();
   }
 
   private initializeDefaultCategories() {
@@ -72,6 +74,95 @@ export class MemStorage implements IStorage {
         color: cat.color,
       };
       this.categories.set(category.id, category);
+    });
+  }
+
+  private initializeSampleData() {
+    // Create sample expenses for different time periods
+    const now = new Date();
+    const sampleExpenses = [
+      // Today
+      {
+        userId: 1,
+        amount: "15.50",
+        categoryId: 1, // Food
+        merchant: "Starbucks",
+        description: "Morning coffee",
+        date: now.toISOString(),
+        source: "manual",
+        notes: "Latte with extra shot"
+      },
+      {
+        userId: 1,
+        amount: "45.80",
+        categoryId: 1, // Food
+        merchant: "Thai Restaurant",
+        description: "Lunch meeting",
+        date: now.toISOString(),
+        source: "manual",
+        notes: "Business lunch"
+      },
+      // Yesterday
+      {
+        userId: 1,
+        amount: "25.00",
+        categoryId: 2, // Transport
+        merchant: "Uber",
+        description: "Ride to airport",
+        date: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+        source: "ai_scan",
+        notes: null
+      },
+      // This week
+      {
+        userId: 1,
+        amount: "120.00",
+        categoryId: 3, // Shopping
+        merchant: "Amazon",
+        description: "Office supplies",
+        date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        source: "bank_sync",
+        notes: "Desk organizers and notebooks"
+      },
+      // This month
+      {
+        userId: 1,
+        amount: "85.90",
+        categoryId: 8, // Utilities
+        merchant: "Electric Company",
+        description: "Monthly electricity bill",
+        date: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        source: "bank_sync",
+        notes: null
+      },
+      {
+        userId: 1,
+        amount: "200.00",
+        categoryId: 4, // Business
+        merchant: "Co-working Space",
+        description: "Monthly membership",
+        date: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        source: "manual",
+        notes: "Premium plan with meeting rooms"
+      }
+    ];
+
+    sampleExpenses.forEach(expenseData => {
+      const id = this.currentExpenseId++;
+      const expense: Expense = {
+        id,
+        userId: expenseData.userId,
+        amount: expenseData.amount,
+        categoryId: expenseData.categoryId,
+        merchant: expenseData.merchant,
+        description: expenseData.description,
+        date: new Date(expenseData.date),
+        receiptUrl: null,
+        notes: expenseData.notes,
+        source: expenseData.source,
+        createdAt: new Date(),
+      };
+      this.expenses.set(id, expense);
     });
   }
 
