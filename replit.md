@@ -16,9 +16,10 @@ Bill Genius is a modern expense tracking application designed for mobile-first u
 ### Backend Architecture
 - **Framework**: Express.js with TypeScript
 - **Database ORM**: Drizzle ORM for type-safe database operations
-- **Database**: PostgreSQL (configured for Neon serverless)
+- **Database**: PostgreSQL with persistent storage
 - **API Pattern**: RESTful API design
 - **Validation**: Zod schemas shared between frontend and backend
+- **Storage**: DatabaseStorage class implementing full CRUD operations
 
 ### Mobile-First Design
 - Responsive design optimized for mobile devices
@@ -103,7 +104,9 @@ The application uses three main entities:
 - Port configuration for development and production
 
 ## Changelog
-- June 14, 2025. Initial setup
+- June 14, 2025: Initial setup with in-memory storage
+- June 14, 2025: Added time period analytics (Day/Week/Month/Year filtering)
+- June 14, 2025: Migrated from in-memory storage to PostgreSQL database with persistent data storage
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
