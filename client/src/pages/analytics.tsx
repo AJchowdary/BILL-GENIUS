@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/layout/header";
 import BottomNavigation from "@/components/layout/bottom-navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, getCurrentMonth, getMonthName, getCategoryColorClasses } from "@/lib/utils";
 import { BarChart3, PieChart, TrendingUp } from "lucide-react";
 
@@ -22,16 +24,45 @@ interface MonthlySummary {
   year: number;
 }
 
+type TimePeriod = "day" | "week" | "month" | "year";
+
 export default function Analytics() {
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("month");
   const { year, month } = getCurrentMonth();
   
+  // Helper function to get period display text
+  const getPeriodDisplayText = () => {
+    const now = new Date();
+    switch (selectedPeriod) {
+      case "day":
+        return `Today, ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+      case "week":
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        return `This Week (${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`;
+      case "month":
+        return `${getMonthName(month)} ${year}`;
+      case "year":
+        return `${year}`;
+      default:
+        return `${getMonthName(month)} ${year}`;
+    }
+  };
+
   const { data: categoryTotals = [] } = useQuery<CategoryTotal[]>({
-    queryKey: ["/api/analytics/category-totals", { year, month }],
+    queryKey: ["/api/analytics/category-totals", { period: selectedPeriod, date: new Date().toISOString() }],
   });
 
   const { data: summary } = useQuery<MonthlySummary>({
-    queryKey: ["/api/analytics/monthly-summary", { year, month }],
+    queryKey: ["/api/analytics/monthly-summary", { period: selectedPeriod, date: new Date().toISOString() }],
   });
+
+  const timePeriods = [
+    { key: "day" as TimePeriod, label: "Day" },
+    { key: "week" as TimePeriod, label: "Week" },
+    { key: "month" as TimePeriod, label: "Month" },
+    { key: "year" as TimePeriod, label: "Year" },
+  ];
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -41,8 +72,29 @@ export default function Analytics() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-neutral-800 mb-2">Analytics</h2>
           <p className="text-neutral-500">
-            {getMonthName(month)} {year} spending insights
+            {getPeriodDisplayText()} spending insights
           </p>
+        </div>
+
+        {/* Time Period Tabs */}
+        <div className="mb-6">
+          <div className="flex bg-white rounded-xl p-1 border border-neutral-100">
+            {timePeriods.map((period) => (
+              <Button
+                key={period.key}
+                onClick={() => setSelectedPeriod(period.key)}
+                variant={selectedPeriod === period.key ? "default" : "ghost"}
+                className={`flex-1 text-sm ${
+                  selectedPeriod === period.key
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-neutral-600 hover:text-neutral-800"
+                }`}
+                size="sm"
+              >
+                {period.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {summary && (

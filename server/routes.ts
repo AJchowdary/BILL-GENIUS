@@ -97,12 +97,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics routes
   app.get("/api/analytics/category-totals", async (req, res) => {
     try {
-      const { year, month } = req.query;
-      const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
-      const currentMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
-
-      const categoryTotals = await storage.getCategoryTotals(MOCK_USER_ID, currentYear, currentMonth);
-      res.json(categoryTotals);
+      const { year, month, period, date } = req.query;
+      
+      if (period) {
+        const referenceDate = date ? new Date(date as string) : new Date();
+        const categoryTotals = await storage.getCategoryTotalsByPeriod(MOCK_USER_ID, period as 'day' | 'week' | 'month' | 'year', referenceDate);
+        res.json(categoryTotals);
+      } else {
+        const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
+        const currentMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+        const categoryTotals = await storage.getCategoryTotals(MOCK_USER_ID, currentYear, currentMonth);
+        res.json(categoryTotals);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch category totals" });
     }
@@ -110,31 +116,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/analytics/monthly-summary", async (req, res) => {
     try {
-      const { year, month } = req.query;
-      const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
-      const currentMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
-
-      const expenses = await storage.getExpensesByUserIdAndMonth(MOCK_USER_ID, currentYear, currentMonth);
-      const total = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+      const { year, month, period, date } = req.query;
       
-      // Calculate previous month for comparison
-      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-      const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-      const prevExpenses = await storage.getExpensesByUserIdAndMonth(MOCK_USER_ID, prevYear, prevMonth);
-      const prevTotal = prevExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
-      
-      const changePercent = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0;
+      if (period) {
+        const referenceDate = date ? new Date(date as string) : new Date();
+        const expenses = await storage.getExpensesByUserIdAndPeriod(MOCK_USER_ID, period as 'day' | 'week' | 'month' | 'year', referenceDate);
+        const total = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+        
+        // Calculate previous period for comparison
+        let prevDate = new Date(referenceDate);
+        switch (period) {
+          case 'day':
+            prevDate.setDate(prevDate.getDate() - 1);
+            break;
+          case 'week':
+            prevDate.setDate(prevDate.getDate() - 7);
+            break;
+          case 'month':
+            prevDate.setMonth(prevDate.getMonth() - 1);
+            break;
+          case 'year':
+            prevDate.setFullYear(prevDate.getFullYear() - 1);
+            break;
+        }
+        
+        const prevExpenses = await storage.getExpensesByUserIdAndPeriod(MOCK_USER_ID, period as 'day' | 'week' | 'month' | 'year', prevDate);
+        const prevTotal = prevExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+        const changePercent = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0;
 
-      res.json({
-        total,
-        expenseCount: expenses.length,
-        changePercent: Math.round(changePercent * 100) / 100,
-        budget: 3000, // Mock budget
-        month: currentMonth,
-        year: currentYear,
-      });
+        res.json({
+          total,
+          expenseCount: expenses.length,
+          changePercent: Math.round(changePercent * 100) / 100,
+          budget: 3000, // Mock budget
+          period,
+          date: referenceDate.toISOString(),
+        });
+      } else {
+        const currentYear = year ? parseInt(year as string) : new Date().getFullYear();
+        const currentMonth = month ? parseInt(month as string) : new Date().getMonth() + 1;
+
+        const expenses = await storage.getExpensesByUserIdAndMonth(MOCK_USER_ID, currentYear, currentMonth);
+        const total = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+        
+        // Calculate previous month for comparison
+        const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+        const prevExpenses = await storage.getExpensesByUserIdAndMonth(MOCK_USER_ID, prevYear, prevMonth);
+        const prevTotal = prevExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+        
+        const changePercent = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : 0;
+
+        res.json({
+          total,
+          expenseCount: expenses.length,
+          changePercent: Math.round(changePercent * 100) / 100,
+          budget: 3000, // Mock budget
+          month: currentMonth,
+          year: currentYear,
+        });
+      }
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch monthly summary" });
+      res.status(500).json({ error: "Failed to fetch summary" });
     }
   });
 

@@ -24,10 +24,12 @@ export interface IStorage {
   // Expenses
   getExpensesByUserId(userId: number): Promise<ExpenseWithCategory[]>;
   getExpensesByUserIdAndMonth(userId: number, year: number, month: number): Promise<ExpenseWithCategory[]>;
+  getExpensesByUserIdAndPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date?: Date): Promise<ExpenseWithCategory[]>;
   createExpense(expense: InsertExpense): Promise<Expense>;
   updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
   getCategoryTotals(userId: number, year: number, month: number): Promise<{ categoryId: number; categoryName: string; total: number; color: string; icon: string }[]>;
+  getCategoryTotalsByPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date?: Date): Promise<{ categoryId: number; categoryName: string; total: number; color: string; icon: string }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -130,10 +132,16 @@ export class MemStorage implements IStorage {
   async createExpense(insertExpense: InsertExpense): Promise<Expense> {
     const id = this.currentExpenseId++;
     const expense: Expense = {
-      ...insertExpense,
       id,
+      userId: insertExpense.userId!,
       amount: insertExpense.amount,
+      categoryId: insertExpense.categoryId!,
+      merchant: insertExpense.merchant || null,
+      description: insertExpense.description || null,
       date: new Date(insertExpense.date),
+      receiptUrl: insertExpense.receiptUrl || null,
+      notes: insertExpense.notes || null,
+      source: insertExpense.source || "manual",
       createdAt: new Date(),
     };
     this.expenses.set(id, expense);
@@ -163,6 +171,72 @@ export class MemStorage implements IStorage {
     const categoryTotals = new Map<number, number>();
     
     monthlyExpenses.forEach(expense => {
+      const current = categoryTotals.get(expense.categoryId) || 0;
+      categoryTotals.set(expense.categoryId, current + parseFloat(expense.amount));
+    });
+
+    const result = Array.from(categoryTotals.entries()).map(([categoryId, total]) => {
+      const category = this.categories.get(categoryId)!;
+      return {
+        categoryId,
+        categoryName: category.name,
+        total,
+        color: category.color,
+        icon: category.icon,
+      };
+    });
+
+    return result.sort((a, b) => b.total - a.total);
+  }
+
+  async getExpensesByUserIdAndPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date: Date = new Date()): Promise<ExpenseWithCategory[]> {
+    const userExpenses = Array.from(this.expenses.values())
+      .filter(expense => {
+        if (expense.userId !== userId) return false;
+        
+        const expenseDate = new Date(expense.date);
+        const referenceDate = new Date(date);
+        
+        switch (period) {
+          case 'day':
+            return expenseDate.toDateString() === referenceDate.toDateString();
+          
+          case 'week':
+            const weekStart = new Date(referenceDate);
+            weekStart.setDate(referenceDate.getDate() - referenceDate.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+            
+            return expenseDate >= weekStart && expenseDate <= weekEnd;
+          
+          case 'month':
+            return expenseDate.getFullYear() === referenceDate.getFullYear() && 
+                   expenseDate.getMonth() === referenceDate.getMonth();
+          
+          case 'year':
+            return expenseDate.getFullYear() === referenceDate.getFullYear();
+          
+          default:
+            return false;
+        }
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return userExpenses.map(expense => ({
+      ...expense,
+      category: this.categories.get(expense.categoryId)!,
+    }));
+  }
+
+  async getCategoryTotalsByPeriod(userId: number, period: 'day' | 'week' | 'month' | 'year', date: Date = new Date()): Promise<{ categoryId: number; categoryName: string; total: number; color: string; icon: string }[]> {
+    const periodExpenses = await this.getExpensesByUserIdAndPeriod(userId, period, date);
+    
+    const categoryTotals = new Map<number, number>();
+    
+    periodExpenses.forEach(expense => {
       const current = categoryTotals.get(expense.categoryId) || 0;
       categoryTotals.set(expense.categoryId, current + parseFloat(expense.amount));
     });
