@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 4.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 4.9%);
+  --primary: hsl(244, 75%, 66%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(142, 76%, 36%);
+  --secondary-foreground: hsl(222, 84%, 4.9%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --accent: hsl(46, 95%, 53%);
+  --accent-foreground: hsl(222, 84%, 4.9%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --ring: hsl(222, 84%, 4.9%);
+  --radius: 0.75rem;
+  --chart-1: hsl(244, 75%, 66%);
+  --chart-2: hsl(142, 76%, 36%);
+  --chart-3: hsl(46, 95%, 53%);
+  --chart-4: hsl(280, 100%, 70%);
+  --chart-5: hsl(340, 75%, 55%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(244, 75%, 66%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(212, 72%, 59%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-neutral-50 { color: hsl(0, 0%, 98%); }
+  .text-neutral-100 { color: hsl(0, 0%, 96%); }
+  .text-neutral-400 { color: hsl(0, 0%, 64%); }
+  .text-neutral-500 { color: hsl(0, 0%, 58%); }
+  .text-neutral-600 { color: hsl(0, 0%, 42%); }
+  .text-neutral-700 { color: hsl(0, 0%, 26%); }
+  .text-neutral-800 { color: hsl(0, 0%, 13%); }
+  
+  .bg-neutral-50 { background-color: hsl(0, 0%, 98%); }
+  .bg-neutral-100 { background-color: hsl(0, 0%, 96%); }
+  .bg-neutral-200 { background-color: hsl(0, 0%, 90%); }
+  
+  .border-neutral-100 { border-color: hsl(0, 0%, 96%); }
+  .border-neutral-200 { border-color: hsl(0, 0%, 90%); }
+  
+  .bg-blue-50 { background-color: hsl(214, 100%, 97%); }
+  .bg-green-50 { background-color: hsl(142, 76%, 96%); }
+  .bg-purple-50 { background-color: hsl(280, 100%, 97%); }
+  .bg-amber-50 { background-color: hsl(46, 95%, 96%); }
+  .bg-red-50 { background-color: hsl(0, 84%, 97%); }
+  .bg-pink-50 { background-color: hsl(340, 75%, 97%); }
+  .bg-indigo-50 { background-color: hsl(244, 75%, 97%); }
+  .bg-yellow-50 { background-color: hsl(54, 91%, 95%); }
+  
+  .text-blue-500 { color: hsl(217, 91%, 60%); }
+  .text-green-500 { color: hsl(142, 76%, 36%); }
+  .text-purple-500 { color: hsl(280, 100%, 70%); }
+  .text-amber-500 { color: hsl(46, 95%, 53%); }
+  .text-red-500 { color: hsl(0, 84%, 60%); }
+  .text-pink-500 { color: hsl(340, 75%, 55%); }
+  .text-indigo-500 { color: hsl(244, 75%, 66%); }
+  .text-yellow-500 { color: hsl(54, 91%, 50%); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s infinite;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(-2px);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
