@@ -1,6 +1,37 @@
-node_modules
-dist
+# Folders that hold temporary stuff or downloaded code
+node_modules/
+dist/
+build/
+.vite/
+
+# Files created by Replit (you don't need them on GitHub)
+.replit
+replit.md
+
+# Files created by your computer's operating system (like Mac's .DS_Store)
 .DS_Store
-server/public
+Thumbs.db
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IMPORTANT: If you have a file named '.env' with secrets (like passwords or keys)
+# UNCOMMENT the line below (remove the #) to prevent uploading sensitive info.
+# .env
+
+# Temporary config files
 vite.config.ts.*
 *.tar.gz
+
+# You had 'server/public' here.
+# --- READ THIS CAREFULLY ---
+# Most times, 'server/public' contains images, CSS, or other public files
+# that your website needs to work. If your website needs these files
+# to be online, then you DO NOT want to ignore them.
+# So, I'm REMOVING it from the default ignore list.
+# If, however, 'server/public' *only* contains temporary generated files
+# that are NOT needed for your app to run, then you can add it back here:
+# server/public
